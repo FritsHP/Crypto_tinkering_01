@@ -1,0 +1,56 @@
+pragma solidity ^0.4.18;
+
+contract MyToken {
+        uint256 public totalSupply;
+    string public name;
+    string public symbol;
+    uint8 public decimals = 18;
+    
+        event Transfer(address indexed from, address indexed to, uint256 value);
+        
+        /* This creates an array with all balances */
+        mapping (address => uint256) public balanceOf;
+    
+    /* Initializes contract with initial supply tokens to the creator of the contract */
+    function MyToken(
+        uint256 initialSupply, 
+        string tokenName, 
+        string tokenSymbol, 
+        uint8 decimalUnits
+        ) public {
+        balanceOf[msg.sender] = initialSupply;              // Give the creator all initial tokens
+        name = tokenName;                                   // Set the name for display purposes
+        symbol = tokenSymbol;                               // Set the symbol for display purposes
+        decimals = decimalUnits;                            // Amount of decimals for display purposes
+    }
+        /* Send coins */
+    function transfer(address _to, uint256 _value) public {
+        /* Check if sender has balance and for overflows */
+        require(balanceOf[msg.sender] >= _value && balanceOf[_to] + _value >= balanceOf[_to]);
+        
+        /* Add and subtract new balances */
+        balanceOf[msg.sender] -= _value;
+        balanceOf[_to] += _value;
+        
+                /* Notify anyone listening that this transfer took place */
+        emit Transfer(msg.sender, _to, _value);
+    }
+        bytes32 public currentChallenge;                         // The coin starts with a challenge
+    uint public timeOfLastProof;                             // Variable to keep track of when rewards were given
+    uint public difficulty = 10**12;                         // Difficulty starts reasonably low
+
+    function proofOfWork(uint nonce) public {
+        bytes8 n = bytes8(keccak256(nonce, currentChallenge));    // Generate a random hash based on input
+        require(n >= bytes8(difficulty));                   // Check if it's under the difficulty
+
+        uint timeSinceLastProof = (now - timeOfLastProof);  // Calculate time since last reward was given
+        require(timeSinceLastProof >=  5 seconds);         // Rewards cannot be given too quickly
+        balanceOf[msg.sender] += timeSinceLastProof / 60 seconds;  // The reward to the winner grows by the minute
+
+        difficulty = difficulty * 10 minutes / timeSinceLastProof + 1;  // Adjusts the difficulty
+
+        timeOfLastProof = now;                              // Reset the counter
+        currentChallenge = keccak256(nonce, currentChallenge, block.blockhash(block.number - 1));  // Save a hash that will be used as the next proof
+    }
+}
+    
